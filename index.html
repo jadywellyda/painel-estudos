@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de Estudos</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#17243a;background:#f1f5fa;color-scheme:light}*{box-sizing:border-box}body{margin:0}main{max-width:1050px;margin:auto;padding:32px 20px}header{display:flex;justify-content:space-between;align-items:center;gap:20px}h1{margin:8px 0;font-size:clamp(1.8rem,4vw,2.7rem)}h2{margin:0 0 18px;font-size:1.25rem}p{line-height:1.6}.eyebrow{color:#315cab;font-weight:700;font-size:.8rem;letter-spacing:.1em}button,input,select{font:inherit}button{background:#204fa3;color:white;border:0;border-radius:8px;padding:11px 16px;cursor:pointer}button:hover{background:#173d81}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #e38a00;outline-offset:3px}.secondary{background:#e4ebf7;color:#173d81}.secondary:hover{background:#d6e2f6}.danger{background:#fae8e8;color:#962121}.danger:hover{background:#f6d7d7}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:28px 0}.stat,.panel{background:white;border:1px solid #dce3ed;border-radius:14px;padding:22px}.stat strong{font-size:2rem;display:block}.stat span,.muted{color:#53627a}progress{width:100%;accent-color:#204fa3;height:14px}.layout{display:grid;grid-template-columns:310px 1fr;gap:22px;margin-top:24px}label{display:block;margin:0 0 7px;font-weight:600}input,select{width:100%;padding:11px;border:1px solid #aab7ca;border-radius:8px;background:white;color:#17243a}.field{margin-bottom:18px}.actions{display:flex;gap:8px;flex-wrap:wrap}.filters{display:grid;grid-template-columns:1fr 170px;gap:12px;margin-bottom:20px}.task{padding:18px 0;border-top:1px solid #dce3ed}.task h3{margin:0 0 6px;overflow-wrap:anywhere}.task p{margin:6px 0 14px;overflow-wrap:anywhere}.badge{display:inline-block;font-size:.8rem;padding:4px 8px;border-radius:6px;background:#e4ebf7;color:#173d81}.done h3{text-decoration:line-through;color:#53627a}.overdue{color:#962121}.empty{padding:30px 0;text-align:center;color:#53627a}#message{min-height:1.5em;margin:14px 0}footer{margin-top:28px;color:#53627a;font-size:.9rem}[hidden]{display:none!important}@media(max-width:740px){header{align-items:flex-start;flex-direction:column}.layout{grid-template-columns:1fr}.filters{grid-template-columns:1fr}.stats{gap:8px}.stat{padding:15px}.stat span{font-size:.85rem}}
+</style>
+</head>
+<body>
+<main>
+<header><div><span class="eyebrow">APRENDER COM ORGANIZAÇÃO</span><h1>Painel de Estudos</h1><p class="muted">Transforme seus estudos em pequenas tarefas possíveis.</p></div><button id="export" class="secondary" type="button">Exportar dados</button></header>
+<section class="stats" aria-label="Resumo das atividades"><div class="stat"><strong id="total">0</strong><span>Atividades</span></div><div class="stat"><strong id="pending">0</strong><span>Pendentes</span></div><div class="stat"><strong id="completed">0</strong><span>Concluídas</span></div></section>
+<label for="progress">Progresso geral <span id="percent">0%</span></label><progress id="progress" max="100" value="0">0%</progress>
+<p id="message" role="status" aria-live="polite"></p>
+<div class="layout">
+<section class="panel"><h2 id="form-title">Nova atividade</h2><form id="form"><div class="field"><label for="title">O que você vai estudar?</label><input id="title" required maxlength="100" placeholder="Ex.: praticar funções"></div><div class="field"><label for="subject">Matéria</label><input id="subject" required maxlength="60" placeholder="Ex.: JavaScript"></div><div class="field"><label for="due">Prazo (opcional)</label><input id="due" type="date" min="0001-01-01" max="9999-12-31"></div><div class="actions"><button id="save" type="submit">Adicionar atividade</button><button id="cancel" type="button" class="secondary" hidden>Cancelar edição</button></div></form></section>
+<section class="panel"><h2>Suas atividades</h2><div class="filters"><div><label for="search">Pesquisar</label><input id="search" type="search" placeholder="Título ou matéria"></div><div><label for="filter">Situação</label><select id="filter"><option value="all">Todas</option><option value="pending">Pendentes</option><option value="done">Concluídas</option></select></div></div><div id="list"></div></section>
+</div><footer>Projeto de estudo · Seus dados ficam neste navegador.</footer>
+</main>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const key = 'jady.painel-estudos.v1';
+let tasks = [], editing = null;
+const validDate = value => value === '' || (/^\d{4}-\d{2}-\d{2}$/.test(value) && value.slice(0,4) !== '0000' && !Number.isNaN(Date.parse(value+'T12:00:00')) && new Date(value+'T12:00:00').toISOString().slice(0,10) === value);
+function announce(text){$('message').textContent=text;}
+try{const saved=JSON.parse(localStorage.getItem(key)||'[]');if(!Array.isArray(saved))throw new Error('formato');const ids=new Set();tasks=saved.filter(t=>t&&typeof t.id==='string'&&!ids.has(t.id)&&typeof t.title==='string'&&t.title.trim()&&t.title.length<=100&&typeof t.subject==='string'&&t.subject.trim()&&t.subject.length<=60&&typeof t.done==='boolean'&&typeof t.due==='string'&&validDate(t.due)&&ids.add(t.id));if(tasks.length!==saved.length)announce('Alguns registros inválidos foram ignorados.');}catch{announce('Não foi possível recuperar os dados. Você pode usar o painel nesta sessão.');}
+function persist(){try{localStorage.setItem(key,JSON.stringify(tasks));return true;}catch{announce('Alteração feita nesta sessão. O navegador não permitiu salvar os dados. Exporte uma cópia.');return false;}}
+function uid(){return typeof crypto.randomUUID==='function'?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);}
+function resetForm(){editing=null;$('form').reset();$('form-title').textContent='Nova atividade';$('save').textContent='Adicionar atividade';$('cancel').hidden=true;}
+function button(text,css,action){const b=document.createElement('button');b.type='button';b.className=css;b.textContent=text;b.addEventListener('click',action);return b;}
+function render(){
+const done=tasks.filter(t=>t.done).length,percent=tasks.length?Math.round(done/tasks.length*100):0;
+$('total').textContent=tasks.length;$('pending').textContent=tasks.length-done;$('completed').textContent=done;$('percent').textContent=percent+'%';$('progress').value=percent;$('progress').textContent=percent+'%';
+const query=$('search').value.trim().toLocaleLowerCase('pt-BR'),filter=$('filter').value;
+const visible=tasks.filter(t=>(t.title+' '+t.subject).toLocaleLowerCase('pt-BR').includes(query)&&(filter==='all'||(filter==='done'?t.done:!t.done))).sort((a,b)=>(a.due||'9999-99-99').localeCompare(b.due||'9999-99-99')||a.title.localeCompare(b.title,'pt-BR'));
+$('list').replaceChildren();
+if(!visible.length){const p=document.createElement('p');p.className='empty';p.textContent=tasks.length?'Nenhuma atividade corresponde aos filtros.':'Adicione sua primeira atividade para começar.';$('list').append(p);return;}
+const now=new Date(),today=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
+for(const task of visible){const article=document.createElement('article');article.className='task'+(task.done?' done':'');const heading=document.createElement('h3');heading.textContent=task.title;const badge=document.createElement('span');badge.className='badge';badge.textContent=task.done?'Concluída':'Pendente';const detail=document.createElement('p');detail.textContent=task.subject+' · '+(task.due?'Prazo: '+task.due.split('-').reverse().join('/'):'Sem prazo');if(task.due&&task.due<today&&!task.done){detail.className='overdue';detail.textContent+=' · Prazo vencido';}const actions=document.createElement('div');actions.className='actions';actions.append(button(task.done?'Reabrir':'Concluir','secondary',()=>{task.done=!task.done;if(persist())announce(task.done?'Atividade concluída.':'Atividade reaberta.');render();}),button('Editar','secondary',()=>{editing=task.id;$('title').value=task.title;$('subject').value=task.subject;$('due').value=task.due;$('form-title').textContent='Editar atividade';$('save').textContent='Salvar alteração';$('cancel').hidden=false;$('title').focus();}),button('Excluir','danger',()=>{if(!confirm('Excluir esta atividade?'))return;tasks=tasks.filter(t=>t.id!==task.id);if(editing===task.id)resetForm();if(persist())announce('Atividade excluída.');render();}));article.append(heading,badge,detail,actions);$('list').append(article);}
+}
+$('form').addEventListener('submit',event=>{event.preventDefault();const title=$('title').value.trim(),subject=$('subject').value.trim(),due=$('due').value;if(!title||!subject){announce('Preencha o título e a matéria com texto.');(!title?$('title'):$('subject')).focus();return;}if(!validDate(due)){announce('Informe uma data válida.');$('due').focus();return;}if(editing){const existing=tasks.find(t=>t.id===editing);if(!existing){resetForm();announce('A atividade não está mais disponível.');return;}Object.assign(existing,{title,subject,due});}else tasks.push({id:uid(),title,subject,due,done:false});if(persist())announce(editing?'Atividade atualizada.':'Atividade adicionada.');resetForm();render();$('title').focus();});
+$('cancel').addEventListener('click',()=>{resetForm();$('title').focus();});$('search').addEventListener('input',render);$('filter').addEventListener('change',render);
+$('export').addEventListener('click',()=>{const url=URL.createObjectURL(new Blob([JSON.stringify({version:1,exportedAt:new Date().toISOString(),tasks},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='painel-estudos.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);announce('Cópia dos dados exportada.');});
+render();
+</script>
+</body>
+</html>
